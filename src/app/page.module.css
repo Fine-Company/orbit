@@ -36,6 +36,16 @@
   font-size: 0.875rem;
 }
 
+.links {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.875rem;
+}
+
+.links a {
+  color: inherit;
+}
+
 .dot {
   width: 0.625rem;
   height: 0.625rem;

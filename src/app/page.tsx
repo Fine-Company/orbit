@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 
 import { checkDatabase, type DatabaseStatus } from "@/db";
+import { auth } from "@/lib/auth/server";
 
 import styles from "./page.module.css";
 
@@ -52,6 +54,26 @@ async function DatabaseStatusCard() {
   return <StatusCard {...statusDisplay[await checkDatabase()]} />;
 }
 
+async function AccountLinks() {
+  await connection();
+  const { data: session } = await auth.getSession();
+
+  if (session?.user) {
+    return (
+      <nav className={styles.links}>
+        <Link href="/dashboard">Dashboard</Link>
+      </nav>
+    );
+  }
+
+  return (
+    <nav className={styles.links}>
+      <Link href="/auth/sign-in">Sign in</Link>
+      <Link href="/auth/sign-up">Sign up</Link>
+    </nav>
+  );
+}
+
 export default function Home() {
   return (
     <main className={styles.main}>
@@ -66,6 +88,9 @@ export default function Home() {
         }
       >
         <DatabaseStatusCard />
+      </Suspense>
+      <Suspense>
+        <AccountLinks />
       </Suspense>
     </main>
   );

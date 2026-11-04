@@ -66,7 +66,24 @@ Email verification is required: new users, and existing unverified users at thei
 neon neon-auth config email-password update --require-email-verification --send-verification-email-on-sign-up --send-verification-email-on-sign-in
 ```
 
-With Cache Components on, a page that reads the session needs `await connection()` first, inside a `<Suspense>` boundary. See `src/app/dashboard/page.tsx`.
+With Cache Components on, a page that reads the session needs `await connection()` first, inside a `<Suspense>` boundary. `getCurrentUser()` does this for you. See `src/app/dashboard/page.tsx`.
+
+## Roles and projects
+
+Every user has a role, `user` or `admin`, stored by Neon Auth in `neon_auth.user`. New users get `user`.
+
+| Page             | `user`                          | `admin`                           |
+| ---------------- | ------------------------------- | --------------------------------- |
+| `/dashboard`     | Yes                             | Yes                               |
+| `/projects`      | Projects they're a member of    | All projects, and can create them |
+| `/projects/[id]` | Only if a member, otherwise 404 | Yes, and manages members          |
+| `/admin`         | Forbidden                       | Yes, and changes roles            |
+
+Signed-out visitors are sent to the sign-in page from all of these.
+
+Make the first admin in the Neon Console: open **Auth > Users**, then choose **Make admin** from the menu next to the user. After that, admins change roles at `/admin`. Admins can't change their own role, so there is always at least one.
+
+Check access on the server with the helpers in `src/lib/auth/access.ts`. Call `requireAdmin()` first in every admin Server Action, and read projects through `src/lib/projects.ts`, which applies the membership rule. Hiding a link isn't protection.
 
 ## Scripts
 
@@ -87,13 +104,19 @@ With Cache Components on, a page that reads the session needs `await connection(
 ```
 src/app/page.tsx             Home page with the database status
 src/app/dashboard/page.tsx   Protected example page
+src/app/projects/            Project list and detail pages, limited by membership
+src/app/admin/               User roles, admin only
+src/app/forbidden.tsx        Page shown when a role check fails
 src/app/auth/                Sign-in and sign-up pages and server actions
 src/app/api/auth/            Proxy to Neon Auth
 src/app/api/health/route.ts  Health check: 200 when the database responds, otherwise 503
 src/lib/auth/server.ts       Neon Auth server instance
+src/lib/auth/access.ts       Current user, requireUser and requireAdmin
+src/lib/projects.ts          Project queries with the access rule
 src/proxy.ts                 Route protection
 src/db/index.ts              Neon client (getDb) and checkDatabase
 src/db/schema.ts             Drizzle schema
+src/db/auth-schema.ts        Read-only view of the Neon Auth users table
 drizzle/                     Generated SQL migrations
 drizzle.config.ts            drizzle-kit config
 neon.ts                      Neon services for this project

@@ -1,6 +1,6 @@
 # Orbit
 
-Next.js (App Router, TypeScript, Tailwind) with a [Neon](https://neon.com) Postgres database through [Drizzle ORM](https://orm.drizzle.team), deployed on [Vercel](https://vercel.com).
+Next.js (App Router, TypeScript, CSS Modules) with a [Neon](https://neon.com) Postgres database through [Drizzle ORM](https://orm.drizzle.team), deployed on [Vercel](https://vercel.com).
 
 ## Local setup
 

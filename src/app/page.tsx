@@ -3,6 +3,8 @@ import { Suspense } from "react";
 
 import { checkDatabase, type DatabaseStatus } from "@/db";
 
+import styles from "./page.module.css";
+
 const statusDisplay: Record<
   DatabaseStatus,
   { label: string; hint: string; dot: string }
@@ -10,17 +12,17 @@ const statusDisplay: Record<
   ok: {
     label: "Database connected",
     hint: "Neon is reachable from this deployment.",
-    dot: "bg-emerald-500",
+    dot: styles.ok,
   },
   not_configured: {
     label: "Database not configured",
     hint: "Set DATABASE_URL in .env.local, or in your Vercel project settings.",
-    dot: "bg-amber-500",
+    dot: styles.notConfigured,
   },
   error: {
     label: "Database unreachable",
     hint: "DATABASE_URL is set, but the query failed. Check the server logs.",
-    dot: "bg-red-500",
+    dot: styles.error,
   },
 };
 
@@ -34,12 +36,12 @@ function StatusCard({
   dot: string;
 }) {
   return (
-    <div className="flex max-w-md flex-col items-center gap-2 text-center">
-      <p className="flex items-center gap-2 font-medium">
-        <span className={`size-2.5 rounded-full ${dot}`} />
+    <div className={styles.status}>
+      <p className={styles.label}>
+        <span className={`${styles.dot} ${dot}`} />
         {label}
       </p>
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">{hint}</p>
+      <p className={styles.hint}>{hint}</p>
     </div>
   );
 }
@@ -52,14 +54,14 @@ async function DatabaseStatusCard() {
 
 export default function Home() {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-8 px-6 py-24">
-      <h1 className="text-5xl font-semibold tracking-tight">Orbit</h1>
+    <main className={styles.main}>
+      <h1 className={styles.title}>Orbit</h1>
       <Suspense
         fallback={
           <StatusCard
             label="Checking database"
             hint="Contacting Neon."
-            dot="bg-zinc-400"
+            dot={styles.pending}
           />
         }
       >

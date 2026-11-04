@@ -85,6 +85,17 @@ Make the first admin in the Neon Console: open **Auth > Users**, then choose **M
 
 Check access on the server with the helpers in `src/lib/auth/access.ts`. Call `requireAdmin()` first in every admin Server Action, and read projects through `src/lib/projects.ts`, which applies the membership rule. Hiding a link isn't protection.
 
+## GitHub projects
+
+The repositories of a GitHub organization are imported as projects each time an admin opens `/projects`. This turns on once these are set in `.env.local`, and in Vercel for deployments:
+
+- `GITHUB_ORG`: the organization login, for example `Fine-Company`.
+- `GITHUB_TOKEN`: a [fine-grained token](https://github.com/settings/personal-access-tokens/new) with the organization as resource owner, access to all repositories, and read-only **Metadata** permission.
+
+Each sync updates names and descriptions. Archived repositories are skipped, and a repository removed from GitHub stays in Orbit until an admin deletes it. Deleting a project whose repository is still on GitHub only lasts until the next sync, which brings it back without its members. Synced projects follow the same rules as other projects: users only see them once an admin adds them as members.
+
+If a private repository is missing, the token can't see it. Check that its resource owner is the organization, not your personal account, and that any approval request has been accepted.
+
 ## Scripts
 
 | Command               | Description                                       |
@@ -113,6 +124,7 @@ src/app/api/health/route.ts  Health check: 200 when the database responds, other
 src/lib/auth/server.ts       Neon Auth server instance
 src/lib/auth/access.ts       Current user, requireUser and requireAdmin
 src/lib/projects.ts          Project queries with the access rule
+src/lib/github.ts            GitHub API client
 src/proxy.ts                 Route protection
 src/db/index.ts              Neon client (getDb) and checkDatabase
 src/db/schema.ts             Drizzle schema

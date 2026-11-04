@@ -81,6 +81,11 @@ async function Project({ params }: { params: Promise<{ id: string }> }) {
     <>
       <h1 className={styles.title}>{project.name}</h1>
       <p className={styles.muted}>{project.description}</p>
+      {project.githubUrl && (
+        <nav className={styles.nav}>
+          <a href={project.githubUrl}>View on GitHub</a>
+        </nav>
+      )}
       {user.role === "admin" && <Members projectId={project.id} />}
     </>
   );

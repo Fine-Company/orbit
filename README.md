@@ -90,9 +90,11 @@ Check access on the server with the helpers in `src/lib/auth/access.ts`. Call `r
 The repositories of a GitHub organization are imported as projects each time an admin opens `/projects`. This turns on once these are set in `.env.local`, and in Vercel for deployments:
 
 - `GITHUB_ORG`: the organization login, for example `Fine-Company`.
-- `GITHUB_TOKEN`: a [fine-grained token](https://github.com/settings/personal-access-tokens/new) with the organization as resource owner, access to all repositories, and read-only **Metadata** permission.
+- `GITHUB_TOKEN`: a [fine-grained token](https://github.com/settings/personal-access-tokens/new) with the organization as resource owner, access to all repositories, and read-only **Metadata** and **Contents** permissions.
 
 Each sync updates names and descriptions. Archived repositories are skipped, and a repository removed from GitHub stays in Orbit until an admin deletes it. Deleting a project whose repository is still on GitHub only lasts until the next sync, which brings it back without its members. Synced projects follow the same rules as other projects: users only see them once an admin adds them as members.
+
+The page for a synced project has a branch dropdown and a table of the latest 50 commits on that branch, read live from GitHub. Anyone who can open the project sees them, so adding a member to a private repository's project shows them its commit history.
 
 If a private repository is missing, the token can't see it. Check that its resource owner is the organization, not your personal account, and that any approval request has been accepted.
 

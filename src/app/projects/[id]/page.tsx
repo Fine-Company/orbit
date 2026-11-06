@@ -12,6 +12,7 @@ import {
 } from "@/lib/projects";
 
 import { addMember, deleteProject, removeMember } from "../actions";
+import { Commits } from "./commits";
 
 export const metadata: Metadata = { title: "Project | Orbit" };
 
@@ -69,7 +70,10 @@ async function Members({ projectId }: { projectId: string }) {
   );
 }
 
-async function Project({ params }: { params: Promise<{ id: string }> }) {
+async function Project({
+  params,
+  searchParams,
+}: Pick<PageProps<"/projects/[id]">, "params" | "searchParams">) {
   const [{ id }, user] = await Promise.all([params, requireUser()]);
 
   // Same response whether the project is missing or off limits, so a user
@@ -87,18 +91,32 @@ async function Project({ params }: { params: Promise<{ id: string }> }) {
         </nav>
       )}
       {user.role === "admin" && <Members projectId={project.id} />}
+      {project.githubUrl && (
+        <section className={styles.section}>
+          <h2 className={styles.heading}>Commits</h2>
+          <Suspense fallback={<p className={styles.muted}>Loading commits</p>}>
+            <Commits
+              githubUrl={project.githubUrl}
+              searchParams={searchParams}
+            />
+          </Suspense>
+        </section>
+      )}
     </>
   );
 }
 
-export default function ProjectPage({ params }: PageProps<"/projects/[id]">) {
+export default function ProjectPage({
+  params,
+  searchParams,
+}: PageProps<"/projects/[id]">) {
   return (
     <main className={styles.main}>
       <nav className={styles.nav}>
         <Link href="/projects">All projects</Link>
       </nav>
       <Suspense fallback={<p className={styles.muted}>Loading project</p>}>
-        <Project params={params} />
+        <Project params={params} searchParams={searchParams} />
       </Suspense>
     </main>
   );

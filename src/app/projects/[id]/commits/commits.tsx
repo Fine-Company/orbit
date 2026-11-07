@@ -6,11 +6,7 @@ import {
 } from "@/lib/github";
 
 import { BranchSelect } from "./branch-select";
-
-const dateFormat = new Intl.DateTimeFormat("en-US", {
-  dateStyle: "medium",
-  timeZone: "UTC",
-});
+import { DateCell, LinesCell } from "../table-cells";
 
 async function loadCommits(githubUrl: string, requested: unknown) {
   try {
@@ -66,26 +62,25 @@ export async function Commits({
               <th scope="col">Message</th>
               <th scope="col">Author</th>
               <th scope="col">Date</th>
+              <th scope="col">Lines</th>
               <th scope="col">Commit</th>
             </tr>
           </thead>
           <tbody>
-            {data.commits.map(({ sha, html_url: url, commit }) => (
-              <tr key={sha}>
+            {data.commits.map((commit) => (
+              <tr key={commit.oid}>
                 <td>{commit.message.split("\n")[0]}</td>
                 <td className={`${styles.muted} ${styles.nowrap}`}>
                   {commit.author?.name ?? "Unknown"}
                 </td>
-                <td className={`${styles.muted} ${styles.nowrap}`}>
-                  {commit.author && (
-                    <time dateTime={commit.author.date}>
-                      {dateFormat.format(new Date(commit.author.date))}
-                    </time>
-                  )}
-                </td>
+                <DateCell date={commit.authoredDate} />
+                <LinesCell
+                  additions={commit.additions}
+                  deletions={commit.deletions}
+                />
                 <td>
-                  <a href={url} className={styles.sha}>
-                    {sha.slice(0, 7)}
+                  <a href={commit.url} className={styles.sha}>
+                    {commit.oid.slice(0, 7)}
                   </a>
                 </td>
               </tr>

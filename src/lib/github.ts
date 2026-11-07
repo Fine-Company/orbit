@@ -9,25 +9,40 @@ export type GithubRepo = {
 };
 
 export type GithubCommit = {
-  sha: string;
-  html_url: string;
-  commit: {
-    message: string;
-    author: { name: string; date: string } | null;
-  };
+  oid: string;
+  url: string;
+  message: string;
+  additions: number;
+  deletions: number;
+  authoredDate: string;
+  author: { name: string | null } | null;
+};
+
+export type GithubPullRequest = {
+  number: number;
+  title: string;
+  url: string;
+  state: "OPEN" | "CLOSED" | "MERGED";
+  isDraft: boolean;
+  additions: number;
+  deletions: number;
+  updatedAt: string;
+  author: { login: string } | null;
 };
 
 export const COMMIT_LIMIT = 50;
+export const PULL_REQUEST_LIMIT = 20;
 
 export function isGithubConfigured() {
   return Boolean(process.env.GITHUB_TOKEN && process.env.GITHUB_ORG);
 }
 
-async function githubGet<T>(path: string) {
+async function githubRequest<T>(path: string, init?: RequestInit) {
   const token = process.env.GITHUB_TOKEN;
   if (!token) throw new Error("GITHUB_TOKEN must be set.");
 
   const response = await fetch(`https://api.github.com${path}`, {
+    ...init,
     headers: {
       Accept: "application/vnd.github+json",
       Authorization: `Bearer ${token}`,
@@ -41,11 +56,29 @@ async function githubGet<T>(path: string) {
   return (await response.json()) as T;
 }
 
+async function githubGraphql<T>(
+  query: string,
+  variables: Record<string, unknown>,
+) {
+  const { data, errors } = await githubRequest<{
+    data?: T;
+    errors?: { message: string }[];
+  }>("/graphql", {
+    method: "POST",
+    body: JSON.stringify({ query, variables }),
+  });
+  // GraphQL reports failures in the body of a 200 response.
+  if (errors?.length || !data) {
+    throw new Error(`GitHub: ${errors?.[0].message ?? "empty response"}`);
+  }
+  return data;
+}
+
 async function githubGetAll<T>(path: string) {
   const separator = path.includes("?") ? "&" : "?";
   const items: T[] = [];
   for (let page = 1; ; page++) {
-    const batch = await githubGet<T[]>(
+    const batch = await githubRequest<T[]>(
       `${path}${separator}per_page=100&page=${page}`,
     );
     items.push(...batch);
@@ -67,12 +100,17 @@ function repoPath(githubUrl: string) {
   return `/repos${new URL(githubUrl).pathname}`;
 }
 
+function repoName(githubUrl: string) {
+  const [, owner, name] = new URL(githubUrl).pathname.split("/");
+  return { owner, name };
+}
+
 // The token can read every repository in the organization, so callers must
-// have passed getProject() before showing what these two functions return.
+// have passed getProject() before showing what the functions below return.
 export async function listRepoBranches(githubUrl: string) {
   const path = repoPath(githubUrl);
   const [repo, branches] = await Promise.all([
-    githubGet<{ default_branch: string }>(path),
+    githubRequest<{ default_branch: string }>(path),
     githubGetAll<{ name: string }>(`${path}/branches`),
   ]);
   return {
@@ -81,10 +119,71 @@ export async function listRepoBranches(githubUrl: string) {
   };
 }
 
+// GraphQL, because the REST commit list has no line counts and would need a
+// separate request for every commit.
+const COMMITS_QUERY = `
+  query ($owner: String!, $name: String!, $ref: String!, $limit: Int!) {
+    repository(owner: $owner, name: $name) {
+      ref(qualifiedName: $ref) {
+        target {
+          ... on Commit {
+            history(first: $limit) {
+              nodes {
+                oid
+                url
+                message
+                additions
+                deletions
+                authoredDate
+                author { name }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+
 export async function listBranchCommits(githubUrl: string, branch: string) {
-  const query = new URLSearchParams({
-    sha: branch,
-    per_page: String(COMMIT_LIMIT),
+  const data = await githubGraphql<{
+    repository: {
+      ref: { target: { history: { nodes: GithubCommit[] } } } | null;
+    } | null;
+  }>(COMMITS_QUERY, {
+    ...repoName(githubUrl),
+    ref: `refs/heads/${branch}`,
+    limit: COMMIT_LIMIT,
   });
-  return githubGet<GithubCommit[]>(`${repoPath(githubUrl)}/commits?${query}`);
+  return data.repository?.ref?.target.history.nodes ?? [];
+}
+
+const PULL_REQUESTS_QUERY = `
+  query ($owner: String!, $name: String!, $limit: Int!) {
+    repository(owner: $owner, name: $name) {
+      pullRequests(first: $limit, orderBy: { field: UPDATED_AT, direction: DESC }) {
+        nodes {
+          number
+          title
+          url
+          state
+          isDraft
+          additions
+          deletions
+          updatedAt
+          author { login }
+        }
+      }
+    }
+  }
+`;
+
+export async function listPullRequests(githubUrl: string) {
+  const data = await githubGraphql<{
+    repository: { pullRequests: { nodes: GithubPullRequest[] } } | null;
+  }>(PULL_REQUESTS_QUERY, {
+    ...repoName(githubUrl),
+    limit: PULL_REQUEST_LIMIT,
+  });
+  return data.repository?.pullRequests.nodes ?? [];
 }

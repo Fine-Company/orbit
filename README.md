@@ -76,14 +76,29 @@ Every user has a role, `user` or `admin`, stored by Neon Auth in `neon_auth.user
 | ---------------- | ------------------------------- | --------------------------------- |
 | `/dashboard`     | Yes                             | Yes                               |
 | `/projects`      | Projects they're a member of    | All projects, and can create them |
-| `/projects/[id]` | Only if a member, otherwise 404 | Yes, and manages members          |
+| `/projects/[id]`, including its Commits and Pull requests pages | Only if a member, otherwise 404 | Yes, and manages members          |
 | `/admin`         | Forbidden                       | Yes, and changes roles            |
 
 Signed-out visitors are sent to the sign-in page from all of these.
 
 Make the first admin in the Neon Console: open **Auth > Users**, then choose **Make admin** from the menu next to the user. After that, admins change roles at `/admin`. Admins can't change their own role, so there is always at least one.
 
-Check access on the server with the helpers in `src/lib/auth/access.ts`. Call `requireAdmin()` first in every admin Server Action, and read projects through `src/lib/projects.ts`, which applies the membership rule. Hiding a link isn't protection.
+Check access on the server with the helpers in `src/lib/auth/access.ts`. Call `requireAdmin()` first in every admin Server Action, and read projects through `src/lib/projects.ts`, which applies the membership rule. New pages under `/projects/[id]` must call `requireProject()`, because the layout doesn't protect them. Hiding a link isn't protection.
+
+## GitHub projects
+
+The repositories of a GitHub organization are imported as projects each time an admin opens `/projects`. This turns on once these are set in `.env.local`, and in Vercel for deployments:
+
+- `GITHUB_ORG`: the organization login, for example `Fine-Company`.
+- `GITHUB_TOKEN`: a [fine-grained token](https://github.com/settings/personal-access-tokens/new) with the organization as resource owner, access to all repositories, read-only **Metadata** and **Contents** permissions, and read and write **Pull requests** permission.
+
+Each sync updates names and descriptions. Archived repositories are skipped, and a repository removed from GitHub stays in Orbit until an admin deletes it. Deleting a project whose repository is still on GitHub only lasts until the next sync, which brings it back without its members. Synced projects follow the same rules as other projects: users only see them once an admin adds them as members.
+
+A synced project has two more pages in its sidebar, both read live from GitHub. **Commits** has a branch dropdown and the latest 50 commits on that branch with the lines each one added and removed. **Pull requests** lists the 20 most recently updated pull requests in any state. The General page previews the latest 5 commits on the default branch and the 5 most recently updated pull requests. Anyone who can open the project sees them, so adding a member to a private repository's project shows them its commits and pull requests.
+
+**New pull request**, on the Pull requests page and in the General preview, opens a popup to choose the two branches and a title. Anyone who can open the project can use it. Every pull request is created with `GITHUB_TOKEN`, so GitHub shows the token's owner as the author, not the Orbit user who created it.
+
+If a private repository is missing, the token can't see it. Check that its resource owner is the organization, not your personal account, and that any approval request has been accepted.
 
 ## Scripts
 
@@ -113,6 +128,7 @@ src/app/api/health/route.ts  Health check: 200 when the database responds, other
 src/lib/auth/server.ts       Neon Auth server instance
 src/lib/auth/access.ts       Current user, requireUser and requireAdmin
 src/lib/projects.ts          Project queries with the access rule
+src/lib/github.ts            GitHub API client
 src/proxy.ts                 Route protection
 src/db/index.ts              Neon client (getDb) and checkDatabase
 src/db/schema.ts             Drizzle schema

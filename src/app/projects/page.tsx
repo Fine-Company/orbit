@@ -4,7 +4,8 @@ import { Suspense } from "react";
 
 import styles from "@/app/workspace.module.css";
 import { requireUser } from "@/lib/auth/access";
-import { listProjects } from "@/lib/projects";
+import { isGithubConfigured } from "@/lib/github";
+import { listProjects, syncGithubProjects } from "@/lib/projects";
 
 import { createProject } from "./actions";
 
@@ -12,6 +13,18 @@ export const metadata: Metadata = { title: "Projects | Orbit" };
 
 async function Projects() {
   const user = await requireUser();
+
+  // A GitHub outage shouldn't take the whole list down with it.
+  let syncFailed = false;
+  if (user.role === "admin" && isGithubConfigured()) {
+    try {
+      await syncGithubProjects();
+    } catch (error) {
+      console.error("GitHub sync failed", error);
+      syncFailed = true;
+    }
+  }
+
   const projects = await listProjects(user);
 
   return (
@@ -35,6 +48,11 @@ async function Projects() {
             Create project
           </button>
         </form>
+      )}
+      {syncFailed && (
+        <p className={styles.muted}>
+          Couldn&apos;t reach GitHub, so this list may be out of date.
+        </p>
       )}
       {projects.length === 0 ? (
         <p className={styles.muted}>

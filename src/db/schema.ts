@@ -1,4 +1,11 @@
-import { pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  bigint,
+  pgTable,
+  primaryKey,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 import { authUsers } from "./auth-schema";
 
@@ -19,6 +26,9 @@ export const projects = pgTable("projects", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: text("name").notNull(),
   description: text("description").notNull().default(""),
+  // Set on projects synced from GitHub.
+  githubId: bigint("github_id", { mode: "number" }).unique(),
+  githubUrl: text("github_url"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

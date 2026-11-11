@@ -1,17 +1,12 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
 import styles from "@/app/workspace.module.css";
-import { requireUser } from "@/lib/auth/access";
-import {
-  getProject,
-  listProjectMembers,
-  listUsersOutsideProject,
-} from "@/lib/projects";
+import { listProjectMembers, listUsersOutsideProject } from "@/lib/projects";
 
 import { addMember, deleteProject, removeMember } from "../actions";
+import { PreviewGrid } from "./preview-grid";
+import { requireProject } from "./project";
 
 export const metadata: Metadata = { title: "Project | Orbit" };
 
@@ -69,32 +64,30 @@ async function Members({ projectId }: { projectId: string }) {
   );
 }
 
-async function Project({ params }: { params: Promise<{ id: string }> }) {
-  const [{ id }, user] = await Promise.all([params, requireUser()]);
-
-  // Same response whether the project is missing or off limits, so a user
-  // can't find out which projects exist.
-  const project = await getProject(user, id);
-  if (!project) notFound();
+async function General({ params }: Pick<PageProps<"/projects/[id]">, "params">) {
+  const { user, project } = await requireProject(params);
 
   return (
     <>
       <h1 className={styles.title}>{project.name}</h1>
       <p className={styles.muted}>{project.description}</p>
+      {project.githubUrl && (
+        <nav className={styles.nav}>
+          <a href={project.githubUrl}>View on GitHub</a>
+        </nav>
+      )}
       {user.role === "admin" && <Members projectId={project.id} />}
+      {project.githubUrl && (
+        <PreviewGrid projectId={project.id} githubUrl={project.githubUrl} />
+      )}
     </>
   );
 }
 
 export default function ProjectPage({ params }: PageProps<"/projects/[id]">) {
   return (
-    <main className={styles.main}>
-      <nav className={styles.nav}>
-        <Link href="/projects">All projects</Link>
-      </nav>
-      <Suspense fallback={<p className={styles.muted}>Loading project</p>}>
-        <Project params={params} />
-      </Suspense>
-    </main>
+    <Suspense fallback={<p className={styles.muted}>Loading project</p>}>
+      <General params={params} />
+    </Suspense>
   );
 }

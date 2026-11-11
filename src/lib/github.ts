@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 export type GithubRepo = {
   id: number;
   name: string;
@@ -32,6 +34,18 @@ export type GithubPullRequest = {
 
 export const COMMIT_LIMIT = 50;
 export const PULL_REQUEST_LIMIT = 20;
+export const PREVIEW_LIMIT = 5;
+
+export class GithubError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    // GitHub's explanation, when it gives one.
+    readonly reason?: string,
+  ) {
+    super(message);
+  }
+}
 
 export function isGithubConfigured() {
   return Boolean(process.env.GITHUB_TOKEN && process.env.GITHUB_ORG);
@@ -51,7 +65,14 @@ async function githubRequest<T>(path: string, init?: RequestInit) {
     cache: "no-store",
   });
   if (!response.ok) {
-    throw new Error(`GitHub returned ${response.status} for ${path}.`);
+    const body: { errors?: { message?: string }[] } | null = await response
+      .json()
+      .catch(() => null);
+    throw new GithubError(
+      `GitHub returned ${response.status} for ${path}.`,
+      response.status,
+      body?.errors?.[0]?.message,
+    );
   }
   return (await response.json()) as T;
 }
@@ -105,9 +126,10 @@ function repoName(githubUrl: string) {
   return { owner, name };
 }
 
-// The token can read every repository in the organization, so callers must
-// have passed getProject() before showing what the functions below return.
-export async function listRepoBranches(githubUrl: string) {
+// The token can reach every repository in the organization, so callers must
+// have passed getProject() before using the functions below.
+// Cached per request, because several parts of a page need the branches.
+export const listRepoBranches = cache(async (githubUrl: string) => {
   const path = repoPath(githubUrl);
   const [repo, branches] = await Promise.all([
     githubRequest<{ default_branch: string }>(path),
@@ -117,7 +139,7 @@ export async function listRepoBranches(githubUrl: string) {
     defaultBranch: repo.default_branch,
     branches: branches.map((branch) => branch.name),
   };
-}
+});
 
 // GraphQL, because the REST commit list has no line counts and would need a
 // separate request for every commit.
@@ -145,7 +167,11 @@ const COMMITS_QUERY = `
   }
 `;
 
-export async function listBranchCommits(githubUrl: string, branch: string) {
+export async function listBranchCommits(
+  githubUrl: string,
+  branch: string,
+  limit = COMMIT_LIMIT,
+) {
   const data = await githubGraphql<{
     repository: {
       ref: { target: { history: { nodes: GithubCommit[] } } } | null;
@@ -153,7 +179,7 @@ export async function listBranchCommits(githubUrl: string, branch: string) {
   }>(COMMITS_QUERY, {
     ...repoName(githubUrl),
     ref: `refs/heads/${branch}`,
-    limit: COMMIT_LIMIT,
+    limit,
   });
   return data.repository?.ref?.target.history.nodes ?? [];
 }
@@ -178,12 +204,25 @@ const PULL_REQUESTS_QUERY = `
   }
 `;
 
-export async function listPullRequests(githubUrl: string) {
+export async function listPullRequests(
+  githubUrl: string,
+  limit = PULL_REQUEST_LIMIT,
+) {
   const data = await githubGraphql<{
     repository: { pullRequests: { nodes: GithubPullRequest[] } } | null;
   }>(PULL_REQUESTS_QUERY, {
     ...repoName(githubUrl),
-    limit: PULL_REQUEST_LIMIT,
+    limit,
   });
   return data.repository?.pullRequests.nodes ?? [];
+}
+
+export async function createPullRequest(
+  githubUrl: string,
+  pullRequest: { title: string; head: string; base: string },
+) {
+  await githubRequest(`${repoPath(githubUrl)}/pulls`, {
+    method: "POST",
+    body: JSON.stringify(pullRequest),
+  });
 }

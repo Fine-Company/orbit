@@ -5,6 +5,7 @@ import styles from "@/app/workspace.module.css";
 import { listProjectMembers, listUsersOutsideProject } from "@/lib/projects";
 
 import { addMember, deleteProject, removeMember } from "../actions";
+import { PreviewGrid } from "./preview-grid";
 import { requireProject } from "./project";
 
 export const metadata: Metadata = { title: "Project | Orbit" };
@@ -76,6 +77,9 @@ async function General({ params }: Pick<PageProps<"/projects/[id]">, "params">) 
         </nav>
       )}
       {user.role === "admin" && <Members projectId={project.id} />}
+      {project.githubUrl && (
+        <PreviewGrid projectId={project.id} githubUrl={project.githubUrl} />
+      )}
     </>
   );
 }

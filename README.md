@@ -90,11 +90,13 @@ Check access on the server with the helpers in `src/lib/auth/access.ts`. Call `r
 The repositories of a GitHub organization are imported as projects each time an admin opens `/projects`. This turns on once these are set in `.env.local`, and in Vercel for deployments:
 
 - `GITHUB_ORG`: the organization login, for example `Fine-Company`.
-- `GITHUB_TOKEN`: a [fine-grained token](https://github.com/settings/personal-access-tokens/new) with the organization as resource owner, access to all repositories, and read-only **Metadata**, **Contents** and **Pull requests** permissions.
+- `GITHUB_TOKEN`: a [fine-grained token](https://github.com/settings/personal-access-tokens/new) with the organization as resource owner, access to all repositories, read-only **Metadata** and **Contents** permissions, and read and write **Pull requests** permission.
 
 Each sync updates names and descriptions. Archived repositories are skipped, and a repository removed from GitHub stays in Orbit until an admin deletes it. Deleting a project whose repository is still on GitHub only lasts until the next sync, which brings it back without its members. Synced projects follow the same rules as other projects: users only see them once an admin adds them as members.
 
-A synced project has two more pages in its sidebar, both read live from GitHub. **Commits** has a branch dropdown and the latest 50 commits on that branch with the lines each one added and removed. **Pull requests** lists the 20 most recently updated pull requests in any state. Anyone who can open the project sees them, so adding a member to a private repository's project shows them its commits and pull requests.
+A synced project has two more pages in its sidebar, both read live from GitHub. **Commits** has a branch dropdown and the latest 50 commits on that branch with the lines each one added and removed. **Pull requests** lists the 20 most recently updated pull requests in any state. The General page previews the latest 5 commits on the default branch and the 5 most recently updated pull requests. Anyone who can open the project sees them, so adding a member to a private repository's project shows them its commits and pull requests.
+
+**New pull request**, on the Pull requests page and in the General preview, opens a popup to choose the two branches and a title. Anyone who can open the project can use it. Every pull request is created with `GITHUB_TOKEN`, so GitHub shows the token's owner as the author, not the Orbit user who created it.
 
 If a private repository is missing, the token can't see it. Check that its resource owner is the organization, not your personal account, and that any approval request has been accepted.
 

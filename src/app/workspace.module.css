@@ -163,6 +163,123 @@
   cursor: pointer;
 }
 
+.button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.buttonPrimary {
+  border-color: var(--foreground);
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.headerRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.error {
+  color: var(--removed);
+  font-size: 0.875rem;
+}
+
+.dialog {
+  width: min(28rem, calc(100vw - 2rem));
+  /* The reset in globals.css removes the margin that centers a dialog. */
+  margin: auto;
+  padding: 1.5rem;
+  border: 1px solid var(--muted);
+  border-radius: 0.5rem;
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.dialog::backdrop {
+  background: rgb(0 0 0 / 0.5);
+}
+
+.dialogForm {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.dialogActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+}
+
+.field .input {
+  flex: none;
+  width: 100%;
+  min-width: 0;
+}
+
+.previewGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 1rem;
+}
+
+.previewCell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--muted);
+  border-radius: 0.5rem;
+  background: var(--surface);
+}
+
+.previewList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.previewLink {
+  display: block;
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 0.875rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.previewMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.previewMeta .lines {
+  font-size: inherit;
+}
+
+.previewMore {
+  margin-top: auto;
+  color: var(--foreground);
+  font-size: 0.875rem;
+}
+
 .tableWrap {
   overflow-x: auto;
 }

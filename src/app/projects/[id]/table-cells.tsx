@@ -5,28 +5,33 @@ const dateFormat = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
 });
 
+export function FormattedDate({ date }: { date: string }) {
+  return <time dateTime={date}>{dateFormat.format(new Date(date))}</time>;
+}
+
 export function DateCell({ date }: { date: string }) {
   return (
     <td className={`${styles.muted} ${styles.nowrap}`}>
-      <time dateTime={date}>{dateFormat.format(new Date(date))}</time>
+      <FormattedDate date={date} />
     </td>
   );
 }
 
-export function LinesCell({
-  additions,
-  deletions,
-}: {
-  additions: number;
-  deletions: number;
-}) {
+type LineCounts = { additions: number; deletions: number };
+
+export function Lines({ additions, deletions }: LineCounts) {
   return (
-    <td
-      className={styles.lines}
-      aria-label={`${additions} lines added, ${deletions} lines removed`}
-    >
+    <span className={styles.lines}>
       <span className={styles.added}>+{additions}</span>{" "}
       <span className={styles.removed}>-{deletions}</span>
+    </span>
+  );
+}
+
+export function LinesCell({ additions, deletions }: LineCounts) {
+  return (
+    <td aria-label={`${additions} lines added, ${deletions} lines removed`}>
+      <Lines additions={additions} deletions={deletions} />
     </td>
   );
 }

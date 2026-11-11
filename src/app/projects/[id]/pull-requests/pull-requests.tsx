@@ -7,7 +7,7 @@ import {
 
 import { DateCell, LinesCell } from "../table-cells";
 
-function stateLabel({ state, isDraft }: GithubPullRequest) {
+export function stateLabel({ state, isDraft }: GithubPullRequest) {
   if (isDraft && state === "OPEN") return "Draft";
   return { OPEN: "Open", CLOSED: "Closed", MERGED: "Merged" }[state];
 }

@@ -1,6 +1,6 @@
 # Orbit
 
-Next.js (App Router, TypeScript, CSS Modules) with a [Neon](https://neon.com) Postgres database through [Drizzle ORM](https://orm.drizzle.team) and [Neon Auth](https://neon.com/docs/auth/overview), deployed on [Vercel](https://vercel.com).
+Next.js (App Router, TypeScript, CSS Modules) with a [Neon](https://neon.com) Postgres database through [Drizzle ORM](https://orm.drizzle.team) and [Neon Auth](https://neon.com/docs/auth/overview), deployed on [Vercel](https://vercel.com) or as a Docker container.
 
 ## Local setup
 
@@ -29,6 +29,36 @@ Open http://localhost:3000. The home page shows whether the database is connecte
 Neon's shared email sender is for development only. Set up custom SMTP before launch, as described in the [production checklist](https://neon.com/docs/auth/production-checklist).
 
 Migrations don't run during deployment. Run `npm run db:migrate` against the target database before deploying a change that depends on them.
+
+## Docker
+
+The `Dockerfile` builds a production image from the Next.js [standalone output](https://nextjs.org/docs/app/api-reference/config/next-config-js/output), and `compose.yaml` runs it on http://localhost:3000. There's no database container: the app uses the Neon database and Neon Auth in `.env.local`, so do steps 1 and 2 of [Local setup](#local-setup) first. Requires Docker with Compose v2.
+
+```bash
+npm run docker:migrate   # Apply pending migrations
+npm run docker:up        # Build the image and start the app in the background
+npm run docker:logs      # Follow the app logs
+npm run docker:down      # Stop and remove the container
+```
+
+The scripts wrap `docker compose`, so on a machine without Node.js run the commands from `package.json` directly, for example `docker compose up --build -d`.
+
+To run it next to `npm run dev`, which also uses port 3000, pick another port with `ORBIT_PORT`: `ORBIT_PORT=3001 npm run docker:up`, or in PowerShell `$env:ORBIT_PORT=3001; npm run docker:up`.
+
+- The image holds no secrets. `.dockerignore` keeps `.env*` files out of the build, the build uses a placeholder cookie secret, and the container reads the real values from `.env.local` when it starts. Run `npm run docker:up` again after changing them.
+- Migrations don't run when the container starts. `npm run docker:migrate` runs `npm run db:migrate` in a one-off container.
+- Docker's health check requests `/favicon.ico`. `/api/health` queries the database, and checking it every 30 seconds would stop Neon's compute from scaling to zero.
+- `next.config.ts` only turns on standalone output when `NEXT_OUTPUT=standalone`, which the Dockerfile sets, because `next start` doesn't work with it. `npm run build`, `npm run start` and Vercel are unchanged.
+
+To run the image on a server:
+
+1. Add the domain to the Neon Auth allowlist, as in step 3 of [Deploy to Vercel](#deploy-to-vercel).
+2. Write the environment variables to a file. Unlike Compose, `docker run --env-file` keeps quotes as part of the value, so leave them out.
+3. Apply migrations: `docker build --target migrate -t orbit-migrate .`, then `docker run --rm --env-file <file> orbit-migrate`.
+4. Build and start the app: `docker build -t orbit .`, then `docker run -d -p 3000:3000 --env-file <file> orbit`.
+5. Serve it over HTTPS, for example behind a reverse proxy. Neon Auth always marks its session cookies `Secure`, and browsers only accept those over plain HTTP on `localhost`.
+
+Running more than one container, or rolling deployments, needs more setup, such as a shared cache. See the Next.js [self-hosting guide](https://nextjs.org/docs/app/guides/self-hosting#multi-server-deployments).
 
 ## Database workflow
 
@@ -102,17 +132,22 @@ If a private repository is missing, the token can't see it. Check that its resou
 
 ## Scripts
 
-| Command               | Description                                       |
-| --------------------- | ------------------------------------------------- |
-| `npm run dev`         | Start the development server                      |
-| `npm run build`       | Create a production build                         |
-| `npm run start`       | Serve the production build                        |
-| `npm run lint`        | Run ESLint                                        |
-| `npm run typecheck`   | Run the TypeScript compiler                       |
-| `npm run db:generate` | Generate a migration from the schema              |
-| `npm run db:migrate`  | Apply pending migrations                          |
-| `npm run db:push`     | Push the schema without a migration (dev only)    |
-| `npm run db:studio`   | Open Drizzle Studio                               |
+| Command                  | Description                                    |
+| ------------------------ | ---------------------------------------------- |
+| `npm run dev`            | Start the development server                   |
+| `npm run build`          | Create a production build                      |
+| `npm run start`          | Serve the production build                     |
+| `npm run lint`           | Run ESLint                                     |
+| `npm run typecheck`      | Run the TypeScript compiler                    |
+| `npm run db:generate`    | Generate a migration from the schema           |
+| `npm run db:migrate`     | Apply pending migrations                       |
+| `npm run db:push`        | Push the schema without a migration (dev only) |
+| `npm run db:studio`      | Open Drizzle Studio                            |
+| `npm run docker:build`   | Build the Docker image                         |
+| `npm run docker:up`      | Rebuild the image and start the app in Docker  |
+| `npm run docker:down`    | Stop and remove the app container              |
+| `npm run docker:logs`    | Follow the app container's logs                |
+| `npm run docker:migrate` | Apply pending migrations from a container      |
 
 ## Project layout
 
@@ -136,4 +171,7 @@ src/db/auth-schema.ts        Read-only view of the Neon Auth users table
 drizzle/                     Generated SQL migrations
 drizzle.config.ts            drizzle-kit config
 neon.ts                      Neon services for this project
+Dockerfile                   Production image and migration image
+compose.yaml                 Runs the image with .env.local
+.dockerignore                Keeps secrets and local builds out of the image
 ```

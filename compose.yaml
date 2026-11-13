@@ -1,0 +1,21 @@
+name: orbit
+
+services:
+  app:
+    build:
+      context: .
+      target: runner
+    image: orbit
+    env_file: .env.local
+    ports:
+      - "${ORBIT_PORT:-3000}:3000"
+    restart: unless-stopped
+
+  # One-off task that `docker compose up` doesn't start. Run it with `npm run docker:migrate`.
+  migrate:
+    build:
+      context: .
+      target: migrate
+    image: orbit-migrate
+    env_file: .env.local
+    profiles: [tools]

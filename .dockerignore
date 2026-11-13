@@ -1,0 +1,23 @@
+# Secrets: the container reads these at runtime, so they must never be baked into an image.
+.env*
+.neon
+
+# Rebuilt inside the image.
+node_modules
+.next
+*.tsbuildinfo
+next-env.d.ts
+
+# Not needed to build, and would invalidate the build cache when they change.
+.git
+.idea
+.vscode
+.vercel
+coverage
+out
+build
+npm-debug.log*
+*.md
+Dockerfile
+.dockerignore
+compose.yaml
